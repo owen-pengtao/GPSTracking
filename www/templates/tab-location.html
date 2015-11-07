@@ -1,7 +1,12 @@
 <ion-view view-title="Location">
+  <ion-nav-buttons side="secondary">
+    <button class="button button-icon icon ion-refresh" ng-click="refresh()"></button>
+  </ion-nav-buttons>
   <ion-content class="padding">
     <a class="button button-icon icon ion-ios-refresh-empty" ng-click="cleanLocations()"></a>
     <a class="button button-icon icon ion-ios-cloud-upload-outline" ng-click="initMyLocation()"></a>
+    <a class="button button-icon icon ion-ios-alarm" ng-click="setSelectLocation(0)"></a>
+    <a class="button button-icon icon ion-ios-alarm" ng-click="setSelectLocation(1)"></a>
 
     <div class="list card" ng-show="unSentLocations.length > 0">
       <div class="item item-divider">Unsent Locations</div>
@@ -18,12 +23,11 @@
       </div>
       <div class="item item-body">
         <p>
-          <select ng-init="itemLocation = lastSendLocation"
-                  ng-options="location as location.time*1000 | date:'yyyy-MM-dd HH:mm:ss Z' for location in sentLocations | orderBy:'':true"
-                  ng-model="itemLocation"
-                  ng-change="showLocation(itemLocation)">
+          <select ng-options="location as location.time*1000 | date:'yyyy-MM-dd HH:mm:ss Z' for location in sentLocations | orderBy:'-time'"
+                  ng-model="selectLocation"
+                  ng-change="showLocation(selectLocation)">
           </select>
-          latitude: {{lastSendLocation.position.lat}}, longitude: {{lastSendLocation.position.lng}}
+          latitude: {{selectLocation.position.lat}}, longitude: {{selectLocation.position.lng}}
         </p>
         <div id="map" data-tap-disabled="true"></div>
       </div>

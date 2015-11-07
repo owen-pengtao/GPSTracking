@@ -4,10 +4,11 @@ angular.module('tracking.controllers', [])
     var frequencyMin = 10;
     $scope.mapInited = false;
     $scope.sentLocations = Location.getSentLocations();
-    $scope.lastSendLocation = _.last($scope.sentLocations);
+    $scope.lastSendLocation = _.last($scope.sentLocations) || [];
+    $scope.selectLocation = $scope.lastSendLocation;
 
     $scope.unSentLocations = Location.getUnsentLocations();
-    $scope.lastUnSendLocation = _.last($scope.unSentLocations);
+    $scope.lastUnSendLocation = _.last($scope.unSentLocations) || [];
 
     $scope.cleanLocations = function () {
       Location.cleanLocations();
@@ -18,6 +19,14 @@ angular.module('tracking.controllers', [])
       $scope.lastUnSendLocation = [];
       $scope.mapInited = false;
     };
+    $scope.refresh = function () {
+      $window.location.reload(true)
+    };
+
+    $scope.setSelectLocation = function(i){
+      $scope.selectLocation = $scope.sentLocations[i];
+    };
+
     $scope.initMyLocation = function () {
       $scope.mapInited = true;
       $timeout(function(){
@@ -25,6 +34,7 @@ angular.module('tracking.controllers', [])
         $scope.sendMyLocation(null, true);
       });
     };
+
     $scope.sendMyLocation = function (time, backdrop) {
       $ionicLoading.show({
         showBackdrop: backdrop
@@ -49,6 +59,7 @@ angular.module('tracking.controllers', [])
         Location.sendLocation(locations, time).then(function(){
           $scope.sentLocations = Location.saveSentLocations(currentData);
           $scope.lastSendLocation = _.last($scope.sentLocations);
+          $scope.selectLocation = $scope.lastSendLocation;
         }, function(){
           $scope.unSentLocations = Location.saveUnsentLocations(currentData);
           $scope.lastUnSendLocation = _.last($scope.unSentLocations);
@@ -57,12 +68,13 @@ angular.module('tracking.controllers', [])
         console.log(err);
       });
     };
+
     $scope.intervalSend = function () {
       var d = new Date(),
         h = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), (d.getMinutes() - (d.getMinutes() % frequencyMin)) + frequencyMin, 0, 0),
         e = h - d;
       $timeout($scope.intervalSend, e);
-      if (d.getSeconds() === 0) {
+      if (d.getMinutes() % 5 === 0) {
         var time = Math.floor(d.getTime() / 1000);
         $scope.sendMyLocation(time, false);
       }
@@ -75,12 +87,14 @@ angular.module('tracking.controllers', [])
         $scope.mapMarker.setPosition(new google.maps.LatLng(lat, lng));
       }
     };
+
     $scope.showLocation = function(location){
       if (location) {
         $scope.setMapPosition(location.position.lat, location.position.lng);
         $scope.lastSendLocation = location;
       }
     };
+
     $scope.findMe = function(){
       $ionicLoading.show({
         content: 'Getting current location...',
@@ -91,6 +105,7 @@ angular.module('tracking.controllers', [])
         $ionicLoading.hide();
       });
     };
+
     $scope.initMap = function(lat, lng){
       lat = lat || 37.4071;
       lng = lng || -122.1444;
@@ -106,20 +121,13 @@ angular.module('tracking.controllers', [])
         title: "My Location"
       });
     };
+
     if ($scope.sentLocations.length) {
       $scope.initMap();
     }
 })
 
 .controller('ChatsCtrl', function($scope, Chats) {
-  // With the new view caching in Ionic, Controllers are only called
-  // when they are recreated or on app start, instead of every page change.
-  // To listen for when this page is active (for example, to refresh data),
-  // listen for the $ionicView.enter event:
-  //
-  //$scope.$on('$ionicView.enter', function(e) {
-  //});
-
   $scope.chats = Chats.all();
   $scope.remove = function(chat) {
     Chats.remove(chat);
