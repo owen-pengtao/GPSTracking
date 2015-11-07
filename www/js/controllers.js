@@ -1,6 +1,6 @@
 angular.module('tracking.controllers', [])
 
-.controller('LocationCtrl', function($scope, $timeout, $window, $ionicLoading, $cordovaGeolocation, Location) {
+.controller('LocationCtrl', function($scope, $timeout, $window, $q, $ionicLoading, $cordovaGeolocation, Location) {
     var frequencyMin = 10;
     $scope.mapInited = false;
     $scope.sentLocations = Location.getSentLocations();
@@ -23,48 +23,26 @@ angular.module('tracking.controllers', [])
       $window.location.reload(true)
     };
 
-    $scope.setSelectLocation = function(i){
-      $scope.selectLocation = $scope.sentLocations[i];
-    };
-
     $scope.initMyLocation = function () {
       $scope.mapInited = true;
       $timeout(function(){
         $scope.initMap();
-        $scope.sendMyLocation(null, true);
+        $scope._sendMyLocationFormatData();
       });
     };
 
-    $scope.sendMyLocation = function (time, backdrop) {
-      $ionicLoading.show({
-        showBackdrop: backdrop
-      });
-      time = time || Math.floor((new Date()).getTime() / 1000);
-      var posOptions = {timeout: 10000, enableHighAccuracy: false};
-      $cordovaGeolocation.getCurrentPosition(posOptions).then(function (position) {
-        $scope.setMapPosition(position.coords.latitude, position.coords.longitude);
-        $ionicLoading.hide();
-        var currentData = {
-          "time" : time,
-          "position": {
-            "lat": position.coords.latitude,
-            "lng": position.coords.longitude
-          }
-        };
-        var locations = $scope.unSentLocations.concat(currentData);
-        //remove duplicate locations if time is same.
-        _.uniq(locations, function(item) {
-          return item.time;
-        });
-        Location.sendLocation(locations, time).then(function(){
-          $scope.sentLocations = Location.saveSentLocations(currentData);
+    $scope._sendMyLocationFormatData = function () {
+      Location.sendMyLocation(null, true).then(function(data){
+        $scope.setMapPosition(data.currentData.position.lat, data.currentData.position.lng);
+        if (data.saved) {
+          $scope.sentLocations = Location.saveSentLocations(data.currentData);
           $scope.lastSendLocation = _.last($scope.sentLocations);
           $scope.selectLocation = $scope.lastSendLocation;
-        }, function(){
-          $scope.unSentLocations = Location.saveUnsentLocations(currentData);
+        }else{
+          $scope.unSentLocations = Location.saveUnsentLocations(data.currentData);
           $scope.lastUnSendLocation = _.last($scope.unSentLocations);
-        });
-      }, function(err) {
+        }
+      }, function(err){
         console.log(err);
       });
     };
@@ -76,7 +54,7 @@ angular.module('tracking.controllers', [])
       $timeout($scope.intervalSend, e);
       if (d.getMinutes() % 5 === 0) {
         var time = Math.floor(d.getTime() / 1000);
-        $scope.sendMyLocation(time, false);
+        $scope._sendMyLocationFormatData(time, false);
       }
     };
     $scope.intervalSend();
@@ -127,15 +105,24 @@ angular.module('tracking.controllers', [])
     }
 })
 
-.controller('ChatsCtrl', function($scope, Chats) {
-  $scope.chats = Chats.all();
-  $scope.remove = function(chat) {
-    Chats.remove(chat);
-  };
-})
+.controller('syncCtrl', function($scope, Location) {
+    $scope.sentLocations = Location.getSentLocations();
+    $scope.lastSendLocation = _.last($scope.sentLocations) || [];
 
-.controller('ChatDetailCtrl', function($scope, $stateParams, Chats) {
-  $scope.chat = Chats.get($stateParams.chatId);
+    $scope.unSentLocations = Location.getUnsentLocations();
+    $scope.lastUnSendLocation = _.last($scope.unSentLocations) || [];
+
+    $scope.syncMyLocation = function () {
+      Location.sendMyLocation(null, true).then(function (data) {
+        if (data.saved) {
+          $scope.sentLocations = Location.saveSentLocations(data.currentData);
+          $scope.lastSendLocation = _.last($scope.sentLocations);
+        }else{
+          $scope.unSentLocations = Location.saveUnsentLocations(data.currentData);
+          $scope.lastUnSendLocation = _.last($scope.unSentLocations);
+        }
+      });
+    };
 })
 
 .controller('AccountCtrl', function($scope) {

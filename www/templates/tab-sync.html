@@ -1,0 +1,36 @@
+<ion-view view-title="Sync">
+  <ion-nav-buttons side="left">
+    <button class="button button-icon icon ion-ios-cloud-upload-outline" ng-click="syncMyLocation()"></button>
+  </ion-nav-buttons>
+  <ion-nav-buttons side="right">
+    <button class="button button-icon icon ion-ios-refresh-outline" ng-click="refresh()"></button>
+  </ion-nav-buttons>
+  <ion-content class="padding">
+    <div class="list card" ng-show="unSentLocations.length > 0">
+      <div class="item item-divider">Unsent Locations</div>
+      <div class="item item-body">
+        <ul>
+          <li ng-repeat="location in unSentLocations.reverse()">{{location.time*1000 | date:'yyyy-MM-dd HH:mm:ss Z'}}</li>
+        </ul>
+      </div>
+    </div>
+    <div class="list card" ng-show="sentLocations.length > 0">
+      <div class="item item-divider item-button-right">
+        Sent Locations
+      </div>
+      <div class="item item-body">
+        <div class="row header">
+          <div class="col">Time</div>
+          <div class="col">Latitude / Longtitude</div>
+        </div>
+        <div class="row" ng-repeat="location in sentLocations | orderBy:'-time'">
+          <div class="col">{{location.time*1000 | date:'yyyy-MM-dd HH:mm:ss'}}</div>
+          <div class="col">
+            {{location.position.lat}}<br/>{{location.position.lng}}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </ion-content>
+</ion-view>

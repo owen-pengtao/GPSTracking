@@ -18,7 +18,7 @@ angular.module('tracking.services', [])
     }
   }
 }])
-.factory('Location', function($q, $localstorage){
+.factory('Location', function($q, $localstorage, $ionicLoading, $cordovaGeolocation){
     return {
       sendLocation: function(data, time){
         var deferred = $q.defer();
@@ -74,6 +74,43 @@ angular.module('tracking.services', [])
       cleanLocations: function(){
         $localstorage.remove("unSentLocations");
         $localstorage.remove("sentLocations");
+      },
+      sendMyLocation: function (time, backdrop) {
+        var deferred = $q.defer();
+        $ionicLoading.show({
+          showBackdrop: backdrop
+        });
+        time = time || Math.floor((new Date()).getTime() / 1000);
+        var posOptions = {timeout: 10000, enableHighAccuracy: false};
+        $cordovaGeolocation.getCurrentPosition(posOptions).then(function (position) {
+          $ionicLoading.hide();
+          var currentData = {
+            "time" : time,
+            "position": {
+              "lat": position.coords.latitude,
+              "lng": position.coords.longitude
+            }
+          };
+          var locations = this.getUnsentLocations().concat(currentData);
+          //remove duplicate locations if time is same.
+          _.uniq(locations, function(item) {
+            return item.time;
+          });
+          this.sendLocation(locations, time).then(function(){
+            deferred.resolve({
+              saved: true,
+              currentData: currentData
+            });
+          }, function(){
+            deferred.resolve({
+              saved: false,
+              currentData: currentData
+            });
+          });
+        }.bind(this), function(reason) {
+          deferred.reject(reason);
+        });
+        return deferred.promise;
       }
     };
 })
