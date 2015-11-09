@@ -20,11 +20,11 @@
         <a class="button button-icon icon ion-location findme" ng-click="findMe()"></a>
       </div>
       <div class="item item-body">
+        <select ng-options="location as location.time*1000 | date:'yyyy-MM-dd HH:mm:ss Z' for location in sentLocations | orderBy:'-time'"
+                ng-model="selectLocation"
+                ng-change="showLocation(selectLocation)">
+        </select>
         <p>
-          <select ng-options="location as location.time*1000 | date:'yyyy-MM-dd HH:mm:ss Z' for location in sentLocations | orderBy:'-time'"
-                  ng-model="selectLocation"
-                  ng-change="showLocation(selectLocation)">
-          </select>
           latitude: {{selectLocation.position.lat}}, longitude: {{selectLocation.position.lng}}
         </p>
         <div id="map" data-tap-disabled="true"></div>

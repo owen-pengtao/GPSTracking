@@ -11,7 +11,7 @@ angular.module('tracking', ['ionic', 'ngCordova', 'tracking.controllers', 'track
     }
     if (window.StatusBar) {
       // org.apache.cordova.statusbar required
-      StatusBar.styleLightContent();
+      StatusBar.styleDefault();
     }
   });
 })

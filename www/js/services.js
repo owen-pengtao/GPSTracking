@@ -20,7 +20,7 @@ angular.module('tracking.services', [])
 }])
 .factory('Location', function($q, $localstorage, $ionicLoading, $cordovaGeolocation){
     return {
-      sendLocation: function(data, time){
+      sendLocation: function(data){
         var deferred = $q.defer();
         deferred.resolve();
         return deferred.promise;
@@ -75,6 +75,26 @@ angular.module('tracking.services', [])
         $localstorage.remove("unSentLocations");
         $localstorage.remove("sentLocations");
       },
+      sendLocationData: function(currentData){
+        var deferred = $q.defer();
+        var locations = this.getUnsentLocations().concat(currentData);
+        //remove duplicate locations if time is same.
+        _.uniq(locations, function(item) {
+          return item.time;
+        });
+        this.sendLocation(locations).then(function(){
+          deferred.resolve({
+            saved: true,
+            currentData: currentData
+          });
+        }, function(){
+          deferred.resolve({
+            saved: false,
+            currentData: currentData
+          });
+        });
+        return deferred.promise;
+      },
       sendMyLocation: function (time, backdrop) {
         var deferred = $q.defer();
         $ionicLoading.show({
@@ -91,21 +111,8 @@ angular.module('tracking.services', [])
               "lng": position.coords.longitude
             }
           };
-          var locations = this.getUnsentLocations().concat(currentData);
-          //remove duplicate locations if time is same.
-          _.uniq(locations, function(item) {
-            return item.time;
-          });
-          this.sendLocation(locations, time).then(function(){
-            deferred.resolve({
-              saved: true,
-              currentData: currentData
-            });
-          }, function(){
-            deferred.resolve({
-              saved: false,
-              currentData: currentData
-            });
+          this.sendLocationData(currentData).then(function(data){
+            deferred.resolve(data);
           });
         }.bind(this), function(reason) {
           deferred.reject(reason);

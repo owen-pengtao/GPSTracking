@@ -1,7 +1,7 @@
 angular.module('tracking.controllers', [])
 
 .controller('LocationCtrl', function($scope, $timeout, $window, $q, $ionicLoading, $cordovaGeolocation, Location) {
-    var frequencyMin = 10;
+
     $scope.mapInited = false;
     $scope.sentLocations = Location.getSentLocations();
     $scope.lastSendLocation = _.last($scope.sentLocations) || [];
@@ -20,7 +20,7 @@ angular.module('tracking.controllers', [])
       $scope.mapInited = false;
     };
     $scope.refresh = function () {
-      $window.location.reload(true)
+      $window.location.reload(true);
     };
 
     $scope.initMyLocation = function () {
@@ -47,17 +47,7 @@ angular.module('tracking.controllers', [])
       });
     };
 
-    $scope.intervalSend = function () {
-      var d = new Date(),
-        h = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), (d.getMinutes() - (d.getMinutes() % frequencyMin)) + frequencyMin, 0, 0),
-        e = h - d;
-      $timeout($scope.intervalSend, e);
-      if (d.getMinutes() % 5 === 0) {
-        var time = Math.floor(d.getTime() / 1000);
-        $scope._sendMyLocationFormatData(time, false);
-      }
-    };
-    $scope.intervalSend();
+
 
     $scope.setMapPosition = function(lat, lng){
       if($scope.map && $scope.mapMarker) {
@@ -105,22 +95,76 @@ angular.module('tracking.controllers', [])
     }
 })
 
-.controller('syncCtrl', function($scope, Location) {
+.controller('syncCtrl', function($scope, $timeout, $window, $q, Location) {
     $scope.sentLocations = Location.getSentLocations();
     $scope.lastSendLocation = _.last($scope.sentLocations) || [];
 
     $scope.unSentLocations = Location.getUnsentLocations();
     $scope.lastUnSendLocation = _.last($scope.unSentLocations) || [];
 
-    $scope.syncMyLocation = function () {
-      Location.sendMyLocation(null, true).then(function (data) {
-        if (data.saved) {
-          $scope.sentLocations = Location.saveSentLocations(data.currentData);
-          $scope.lastSendLocation = _.last($scope.sentLocations);
-        }else{
-          $scope.unSentLocations = Location.saveUnsentLocations(data.currentData);
-          $scope.lastUnSendLocation = _.last($scope.unSentLocations);
-        }
+    $scope._formatLocationData = function(data){
+      if (data.saved) {
+        $scope.sentLocations = Location.saveSentLocations(data.currentData);
+        $scope.lastSendLocation = _.last($scope.sentLocations);
+      }else{
+        $scope.unSentLocations = Location.saveUnsentLocations(data.currentData);
+        $scope.lastUnSendLocation = _.last($scope.unSentLocations);
+      }
+    };
+
+    function onDeviceReady() {
+      var bgGeo = window.BackgroundGeolocation;
+
+      bgGeo.configure(function(location, taskId) {
+        var data = {
+          saved: false,
+          currentData: {
+            "time" : $scope.time,
+            "position": {
+              "lat": location.coords.latitude,
+              "lng": location.coords.longitude
+            }
+          }
+        };
+        setTimeout(function() {
+          $scope._formatLocationData(data);
+          bgGeo.finish(taskId); // <-- execute #finish when your work in callbackFn is complete
+        }, 1000);
+      }, function(error) {
+        console.log('BackgroundGeoLocation error');
+      }, {
+        desiredAccuracy: 10,
+        stationaryRadius: 20,
+        distanceFilter: 30,
+        notificationTitle: 'Background tracking', // <-- android only, customize the title of the notification
+        notificationText: 'ENABLED', // <-- android only, customize the text of the notification
+        activityType: 'AutomotiveNavigation',
+        debug: true, // <-- enable this hear sounds for background-geolocation life-cycle.
+        stopOnTerminate: false
+      });
+
+      bgGeo.start();
+    }
+
+    var frequencyMin = 1;
+    $scope.intervalSend = function () {
+      var d = new Date(),
+        h = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), (d.getMinutes() - (d.getMinutes() % frequencyMin)) + frequencyMin, 0, 0),
+        e = h - d;
+      $timeout($scope.intervalSend, e);
+      if (d.getSeconds() === 0) {
+        $scope.time = Math.floor(d.getTime() / 1000);
+        $scope.syncMyLocation($scope.time, true);
+      }
+    };
+    $scope.intervalSend();
+
+    $scope.refresh = function () {
+      $window.location.reload(true);
+    };
+    $scope.syncMyLocation = function (time, backdrop) {
+      Location.sendMyLocation(time, backdrop).then(function (data) {
+        $scope._formatLocationData(data);
       });
     };
 })
